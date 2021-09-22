@@ -23,7 +23,11 @@ class UsersViewSet(ModelViewSet):
         permission_classes = []
         if self.action == "list":
             permission_classes = [IsAdminUser]
-        elif self.action == "create" or self.action == "retrieve":
+        elif (
+            self.action == "create"
+            or self.action == "retrieve"
+            or self.action == "favs"
+        ):
             permission_classes = [AllowAny]
         else:
             permission_classes = [IsSelf]
@@ -45,19 +49,16 @@ class UsersViewSet(ModelViewSet):
         else:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-
-class FavsView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        user = request.user
+    @action(detail=True)
+    def favs(self, request, pk):
+        user = self.get_object()
         serializer = RoomSerializer(user.favs.all(), many=True).data
         return Response(serializer)
-
-    def put(self, request):
+    
+    @favs.mapping.put
+    def toggle_favs(self, request, pk):
         pk = request.data.get("pk", None)
-        user = request.user
+        user = self.get_object()
         if pk is not None:
             try:
                 room = Room.objects.get(pk=pk)
